@@ -15,10 +15,17 @@ namespace GPUImgProc {
 		PNGViewer(PNGViewer&&) = delete; //Disallow move constructor
 		PNGViewer& operator=(PNGViewer&&) = delete; //Disallow move assign
 
+
+		unsigned char* getData();
+		unsigned char* getDataSingleChannel();
+
 		void setData(unsigned char* data, int width, int height);
 		void setDataFromFile(std::string& filename);
 		void show();
 		void showWaitForEsc();
+
+		int getWidth() { return w; }
+		int getHeight() { return h; }
 
 	private:
 		void createWindow();

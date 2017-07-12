@@ -48,6 +48,23 @@ namespace GPUImgProc {
 		destroyWindow();
 		destroyTextures();
 	}
+
+	unsigned char * GPUImgProc::PNGViewer::getData()
+	{
+		return image;
+	}
+
+	unsigned char * GPUImgProc::PNGViewer::getDataSingleChannel()
+	{
+		unsigned char * newData = new unsigned char[w*h];
+		for (int i = 0; i < w*h; ++i) {
+			newData[i] = image[i * 4 + 0];
+		}
+		return newData;
+	}
+
+
+
 	//Load data for the viewer. Data is an unsigned char. Data will be interpreted as rgba (0xff000000 red, 0x00ff0000 green, 0x0000ff00 blue, 0x000000ff alpha)
 	// TODO Fix, so one can set RGBA / Gray mode.
 	// TODO How to handle different types of input? 
