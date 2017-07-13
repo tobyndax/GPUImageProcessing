@@ -175,7 +175,7 @@ namespace GPUImgProc {
 		int cw, ch;
 		if (!window) createWindow();  //If there is no window, create it.
 		SDL_GetWindowSize(window, &cw, &ch);
-		if (cw != w || ch != h) SDL_SetWindowSize(window, w, h); //If image size changed, change window size
+		if (cw != w/jump || ch != h/jump) SDL_SetWindowSize(window, w/jump, h/jump); //If image size changed, change window size
 		generateTexture();
 
 		/*pause until you press escape and meanwhile redraw screen*/
