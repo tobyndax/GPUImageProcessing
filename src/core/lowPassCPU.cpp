@@ -11,7 +11,6 @@ GPUImgProc::LowPassCPU::LowPassCPU(unsigned char * aData, int aWidth, int aHeigh
 	this->height = aHeight;
 
 	this->ping = new float[width*height];
-	this->pong = new float[width*height];
 	setData(aData);
 }
 
@@ -174,7 +173,8 @@ void GPUImgProc::LowPassCPU::horizontalPassCumulativeRow(const int row, const in
 
 GPUImgProc::LowPassCPU::~LowPassCPU()
 {
-	//Nothing needed here yet
+	delete data; 
+	delete ping;
 }
 void GPUImgProc::LowPassCPU::execute()
 {
