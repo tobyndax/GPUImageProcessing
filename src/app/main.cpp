@@ -5,9 +5,8 @@
 
 int actualMain() {
 	GPUImgProc::PNGViewer* pngLoader = new GPUImgProc::PNGViewer();
-	std::string pngPath = "..\\..\\testdata\\lenaGray.png";
+	std::string pngPath = "..\\..\\testdata\\lenaGrayLarge.png";
 	pngLoader->setDataFromFile(pngPath);
-	pngLoader->showWaitForEsc();
 
 	unsigned char* data;
 	data = pngLoader->getDataSingleChannel();
@@ -20,10 +19,16 @@ int actualMain() {
 
 	pngLoader->showWaitForEsc();
 
+	lowPCPU->setData(data);
+
+	lowPCPU->executeReference();
+	newData = lowPCPU->getDataC();
+	pngLoader->setData(reinterpret_cast<unsigned char*>(newData), pngLoader->getWidth(), pngLoader->getHeight());
+
+	pngLoader->showWaitForEsc();
 
 	delete pngLoader;
 	return 0;
-
 }
 
 int main(int argc, char * argv[])
