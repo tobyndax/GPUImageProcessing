@@ -4,7 +4,7 @@
 #ifdef __APPLE__
 #include "../thirdparty/OpenCL1.2/cl.hpp"
 #else
-#include "CL/cl.hpp"
+#include "../thirdparty/OpenCL1.2/cl.hpp"
 #endif
 
 
@@ -31,7 +31,7 @@ void OpenCLPlayground::listDevices(){
 
     std::cout << "Platform ID: " << platform_id++ << std::endl;
     std::cout << "Platform Name: " << platform.getInfo<CL_PLATFORM_NAME>() << std::endl;
-    std::cout << "Platform Vendo r: " << platform.getInfo<CL_PLATFORM_VENDOR>() << std::endl;
+    std::cout << "Platform Vendor: " << platform.getInfo<CL_PLATFORM_VENDOR>() << std::endl;
     std::vector<cl::Device> devices;
 
     platform.getDevices(CL_DEVICE_TYPE_GPU | CL_DEVICE_TYPE_CPU, &devices);

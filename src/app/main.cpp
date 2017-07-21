@@ -7,7 +7,7 @@
 #ifdef __APPLE__
 #include "../thirdparty/OpenCL1.2/cl.hpp"
 #else
-#include "CL/cl.hpp"
+#include "../thirdparty/OpenCL1.2/cl.hpp"
 #endif
 
 #include <utility>
@@ -51,6 +51,8 @@ void openCLMain(){
 
 	OpenCLPlayground ocl;
 	ocl.listDevices();
+	int i;
+	std::cin >> i;
 
 /*
 	//get all platforms (drivers)

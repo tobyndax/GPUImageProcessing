@@ -23,3 +23,6 @@ Right click the GPUImageProcessing folder, select open folder (VS).
 The project should configure itself, select the startup app and build.
 
 SDL dll's are included in the repo for Windows.
+
+Requires that OpenCL Dev SDK is installed. See your manufacturer of CPU/GPU for downloads. 
+After installation a reboot is likely required if using the cmake to configure the project.

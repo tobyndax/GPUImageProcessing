@@ -34,6 +34,14 @@ IF(MSVC)
   target_link_libraries(app debug sdl2.lib)
   target_link_libraries(app optimized sdl2.lib)
 
+  find_package(OpenCL REQUIRED)
+  include_directories(${OpenCL_INCLUDE_DIRS})
+  link_directories(${OpenCL_LIBRARY})
+
+  target_link_libraries(app debug ${OpenCL_LIBRARY})
+  target_link_libraries(app optimized ${OpenCL_LIBRARY})
+
+
 ELSEIF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   message(STATUS "Mac OS X platform detected in app project")
   target_link_libraries(app debug core.dylib)

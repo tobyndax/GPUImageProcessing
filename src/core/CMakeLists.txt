@@ -17,6 +17,13 @@ IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   target_link_libraries(core optimized "-framework OpenCL")
 ELSEIF(MSVC)
 
+  find_package(OpenCL REQUIRED)
+  include_directories(${OpenCL_INCLUDE_DIRS})
+  link_directories(${OpenCL_LIBRARY})
+
+  target_link_libraries(core debug ${OpenCL_LIBRARY})
+  target_link_libraries(core optimized ${OpenCL_LIBRARY})
+
 ENDIF()
 
 add_definitions(-DEXPMODULE)
