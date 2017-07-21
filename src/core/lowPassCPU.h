@@ -8,10 +8,9 @@ namespace GPUImgProc{
 		~LowPassCPU();
 		void execute();
 		void executeReference();
-		float* getDataF(); 
+		float* getDataF();
 		unsigned char* getDataC();
 		void setData(unsigned char* data);
-
 
 	private:
 		const static int TRANSPOSE_BLOCK_SIZE = 8;
