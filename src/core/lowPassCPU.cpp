@@ -62,7 +62,9 @@ void GPUImgProc::LowPassCPU::horizontalPass(int radius)
 		std::swap(data, ping); 
 	}
 }
-void GPUImgProc::LowPassCPU::transposeData() {
+
+//Straightforward implementation of transpose.
+void GPUImgProc::LowPassCPU::transposeData() { 
 	for (int j = 0; j < height; ++j) {
 		for (int i = 0; i < width; ++i) {
 			int currentInd = i + j*width;
@@ -202,7 +204,6 @@ void GPUImgProc::LowPassCPU::executeReference()
 {
 	for (size_t i = 0; i < 1; i++)
 	{
-
 		high_resolution_clock::time_point t1 = high_resolution_clock::now();
 
 		int radius = 25;
@@ -217,7 +218,6 @@ void GPUImgProc::LowPassCPU::executeReference()
 
 		cout << duration / 1000.0f << "ms" << endl;
 	}
-
 }
 
 float * GPUImgProc::LowPassCPU::getDataF()

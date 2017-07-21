@@ -7,7 +7,12 @@ message(STATUS "Setting MSVC flags")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHc")
 #Set c++11 as standard
 set(CMAKE_CXX_STANDARD 11)
-
+IF(MSVC)
+   ADD_DEFINITIONS(/arch:AVX2)
+   ADD_DEFINITIONS(/fp:fast)
+   ADD_DEFINITIONS(/O2)
+   ADD_DEFINITIONS(/FA)
+ENDIF(MSVC)
 #Useful output directories.
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/../lib/")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/../lib/")
