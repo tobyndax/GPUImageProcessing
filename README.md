@@ -1,4 +1,4 @@
-# GPUImageProcessing
+#GPUImageProcessing
 #GPU accelerated Image Processing Library
 
 The project is licensed under the MIT license.

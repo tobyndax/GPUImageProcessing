@@ -18,7 +18,8 @@ namespace GPUImgProc{
 		void horizontalPassCumulative(int radius);
 		void horizontalPassCumulativeRow(const int row ,const int radius);
 		void transposeData();
-		void recursiveTranspose(float* a, float* b, int widthA, int heightA, int strideA,int strideB);
+		void recursiveTranspose(float * __restrict a, float * __restrict  b, int widthA, int heightA, int strideA,int strideB);
+		void transpose(float* __restrict a, float * __restrict b, int width, int height, int strideA, int strideB);
 
 		int numPasses = 3;
 		int width = 0;

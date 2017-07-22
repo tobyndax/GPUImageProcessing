@@ -1,3 +1,4 @@
+
 #include <PNGViewer.h>
 #include <sdl.h> // Need this for SDL_Quit at exit
 #include <lowPassCPU.h>
@@ -13,7 +14,6 @@
 #include <utility>
 #include <fstream>
 #include <string>
-
 int actualMain() {
 	GPUImgProc::PNGViewer* pngLoader = new GPUImgProc::PNGViewer();
 	#ifdef __APPLE__
@@ -27,8 +27,9 @@ int actualMain() {
 	data = pngLoader->getDataSingleChannel();
 
 	GPUImgProc::LowPassCPU *lowPCPU = new GPUImgProc::LowPassCPU(data, pngLoader->getWidth(), pngLoader->getHeight());
-
-	lowPCPU->execute();
+	for (int i = 0; i < 10; ++i){ 
+		lowPCPU->execute();
+	}
 	unsigned char* newData = lowPCPU->getDataC();
 	pngLoader->setData(reinterpret_cast<unsigned char*>(newData), pngLoader->getWidth(), pngLoader->getHeight());
 
@@ -76,7 +77,7 @@ void openCLMain(){
 int main(int argc, char * argv[])
 {
 
-	openCLMain();
+	actualMain();
 
 	atexit(SDL_Quit);
 	return 0;

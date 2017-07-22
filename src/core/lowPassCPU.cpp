@@ -77,8 +77,10 @@ void GPUImgProc::LowPassCPU::transposeData() {
 	}
 	std::swap(ping, data);
 }
-
-void transpose(float* a, float *b, int width, int height, int strideA, int strideB) {
+void  GPUImgProc::LowPassCPU::transpose(float* __restrict a, float * __restrict b, int width, int height, int strideA, int strideB)
+{
+	__assume(height <= TRANSPOSE_BLOCK_SIZE);
+	__assume(width <= TRANSPOSE_BLOCK_SIZE);
 	for (int j = 0; j < height; ++j) {
 		for (int i = 0; i < width; ++i) {
 			int index = i + j*strideA;
@@ -87,8 +89,7 @@ void transpose(float* a, float *b, int width, int height, int strideA, int strid
 		}
 	}
 }
-
-void GPUImgProc::LowPassCPU::recursiveTranspose(float * a, float * b, int widthA, int heightA, int strideA,int strideB)
+void GPUImgProc::LowPassCPU::recursiveTranspose(float * __restrict a, float * __restrict b, int widthA, int heightA, int strideA, int strideB)
 {
 	if (heightA <= TRANSPOSE_BLOCK_SIZE && widthA <= TRANSPOSE_BLOCK_SIZE) {
 		transpose(a, b, widthA, heightA, strideA, strideB);
@@ -108,7 +109,7 @@ void GPUImgProc::LowPassCPU::recursiveTranspose(float * a, float * b, int widthA
 		float* aLeft = a;
 		float* aRight = a + widthA / 2;
 
-		//splitting along height in A means splitting along width in B
+		//splitting along width in A means splitting along height in B
 		float* bTop = b;
 		float* bBot = b + widthA*strideB/ 2;
 
