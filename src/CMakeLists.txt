@@ -6,16 +6,18 @@ IF(MSVC) #If windows (better to check MSVC for the MSVC flags)
 
   #Normal exception handling
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHc")
-ENDIF()
+ENDIF(MSVC)
 
 #Set c++11 as standard
 set(CMAKE_CXX_STANDARD 11)
-IF(MSVC)
+IF(MSVC AND ${CMAKE_CONFIGURATION_TYPES} STREQUAL "Release")
+   message(STATUS ${CMAKE_CONFIGURATION_TYPES} " Enabling optimization")
+	
    ADD_DEFINITIONS(/arch:AVX2)
    ADD_DEFINITIONS(/fp:fast)
    ADD_DEFINITIONS(/O2)
    ADD_DEFINITIONS(/FA)
-ENDIF(MSVC)
+ENDIF(MSVC AND ${CMAKE_CONFIGURATION_TYPES} STREQUAL "Release")
 #Useful output directories.
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/../lib/")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/../lib/")

@@ -68,10 +68,10 @@ namespace GPUImgProc {
 	//Load data for the viewer. Data is an unsigned char. Data will be interpreted as rgba (0xff000000 red, 0x00ff0000 green, 0x0000ff00 blue, 0x000000ff alpha)
 	// TODO Fix, so one can set RGBA / Gray mode.
 	// TODO How to handle different types of input? 
-	void PNGViewer::setData(unsigned char* data, int width, int height)
+	void PNGViewer::setData(unsigned char* data, int width , int height)
 	{
-		w = width;
-		h = height; 
+		w =  width == 0 ? w : width;
+		h = height == 0 ? h : height; 
 		size_t n = width*height*4; 
 		if (image) delete image;
 		image = new unsigned char[4*n]();

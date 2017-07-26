@@ -19,7 +19,7 @@ namespace GPUImgProc {
 		unsigned char* getData();
 		unsigned char* getDataSingleChannel();
 
-		void setData(unsigned char* data, int width, int height);
+		void setData(unsigned char* data, int width = 0, int height = 0);
 		void setDataFromFile(std::string& filename);
 		void show();
 		void showWaitForEsc();

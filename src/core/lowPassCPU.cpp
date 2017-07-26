@@ -181,9 +181,8 @@ GPUImgProc::LowPassCPU::~LowPassCPU()
 }
 void GPUImgProc::LowPassCPU::execute()
 {
-		high_resolution_clock::time_point t1 = high_resolution_clock::now();
 
-		int radius = 25;
+		int radius = 11;
 		
 		//Run functionality
 		horizontalPassCumulative(radius);
@@ -192,32 +191,19 @@ void GPUImgProc::LowPassCPU::execute()
 		horizontalPassCumulative(radius);
 		recursiveTranspose(data, ping, width, height, width, height);
 		std::swap(data, ping);
-
-
-		high_resolution_clock::time_point t2 = high_resolution_clock::now();
-
-		auto duration = duration_cast<microseconds>(t2 - t1).count();
-
-		cout << duration / 1000.0f << "ms" << endl;
 }
 
 void GPUImgProc::LowPassCPU::executeReference()
 {
 	for (size_t i = 0; i < 1; i++)
 	{
-		high_resolution_clock::time_point t1 = high_resolution_clock::now();
 
-		int radius = 25;
+		int radius = 11;
 		//Run functionality
 		horizontalPass(radius);
 		transposeData();
 		horizontalPass(radius);
 		transposeData();
-		high_resolution_clock::time_point t2 = high_resolution_clock::now();
-
-		auto duration = duration_cast<microseconds>(t2 - t1).count();
-
-		cout << duration / 1000.0f << "ms" << endl;
 	}
 }
 
