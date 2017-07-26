@@ -50,7 +50,7 @@ void LowPassGPU::initOpenCL()
 	assert(ret == 0);
 
 	// Build the program
-	ret = clBuildProgram(program, 1, &device_id, NULL, NULL, NULL);
+	ret = clBuildProgram(program, 1, &device_id,"-cl-denorms-are-zero", NULL, NULL);
 	if (ret != 0) {
 		char buffer[10240];
 		clGetProgramBuildInfo(program, device_id, CL_PROGRAM_BUILD_LOG, sizeof(buffer), buffer, NULL);
@@ -59,6 +59,7 @@ void LowPassGPU::initOpenCL()
 	assert(ret == 0);
 	// Create the OpenCL kernel
 	lowPassKernel = clCreateKernel(program, "lowPass", &ret);
+	assert(ret == 0);
 	transposeKernel= clCreateKernel(program, "transpose", &ret);
 	assert(ret == 0);
 
@@ -112,6 +113,7 @@ void LowPassGPU::downloadData()
 	if (output == nullptr) output = new float[width*height];
 	//Upload data to OpenCL memory.
 	clEnqueueReadBuffer(command_queue, output_mem_obj, CL_TRUE, 0, width*height * sizeof(float), output, NULL, NULL, NULL);
+	clFinish(command_queue);
 }
 
 /*Copy data from unsigned char* to float input data
@@ -132,9 +134,9 @@ void LowPassGPU::transpose() {
 	ret = clSetKernelArg(transposeKernel, 1, sizeof(cl_mem), (void *)&output_mem_obj);
 	assert(ret == 0);
 
-	const ::size_t globalWorkSize = width*height;
-	const ::size_t lws = 64;
-	ret = clEnqueueNDRangeKernel(command_queue, transposeKernel, 1, NULL, &globalWorkSize, &lws, NULL, NULL, NULL);
+	const ::size_t globalWorkSize[2] = { width,height };
+	const ::size_t lws[2] = { 16,16 };
+	ret = clEnqueueNDRangeKernel(command_queue, transposeKernel, 2, NULL, globalWorkSize, lws, NULL, NULL, NULL);
 	assert(ret == 0);
 	
 	swapBuffers();
@@ -142,10 +144,11 @@ void LowPassGPU::transpose() {
 
 void LowPassGPU::execute()
 {
+	
 	for(int i = 0; i < 3; i++){
-		const ::size_t globalWorkSize = width*height;
-		const ::size_t lws = 64;
-		cl_int ret = clEnqueueNDRangeKernel(command_queue, lowPassKernel, 1, NULL, &globalWorkSize, &lws, NULL, NULL, NULL);
+		const ::size_t globalWorkSize[2] = { width,height };
+		const ::size_t lws[2] = {16,16};
+		cl_int ret = clEnqueueNDRangeKernel(command_queue, lowPassKernel, 2, NULL, globalWorkSize, lws, NULL, NULL, NULL);
 		assert(ret == 0); 
 		swapBuffers();
 	}
@@ -153,14 +156,15 @@ void LowPassGPU::execute()
 	transpose();
 
 	for (int i = 0; i < 3; i++) {
-		const ::size_t globalWorkSize = width*height;
-		const ::size_t lws = 64;
-		cl_int ret = clEnqueueNDRangeKernel(command_queue, lowPassKernel, 1, NULL, &globalWorkSize, &lws, NULL, NULL, NULL);
+		const ::size_t globalWorkSize[2] = { width,height };
+		const ::size_t lws[2] = { 16,16 };
+		cl_int ret = clEnqueueNDRangeKernel(command_queue, lowPassKernel, 2, NULL, globalWorkSize, lws, NULL, NULL, NULL);
 		assert(ret == 0);
 		swapBuffers();
 	}
-
+	
 	transpose();
+
 	swapBuffers();
 	clFinish(command_queue); //Finish the clCommandqueue to not misrepresent the timings 
 }
@@ -171,7 +175,7 @@ void LowPassGPU::execute()
 */
 unsigned char * LowPassGPU::getDataC()
 {
-	unsigned char * outputC = new unsigned char[width*height];
+	if (!outputC) outputC = new unsigned char[width*height];
 	for (int i = 0; i < width*height; ++i) {
 		outputC[i] = (unsigned char)output[i];
 	}

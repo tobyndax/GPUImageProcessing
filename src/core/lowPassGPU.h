@@ -32,10 +32,10 @@ private:
 	//CPU variables
 	float* input = nullptr;
 	float* output = nullptr;
+	unsigned char * outputC = nullptr;
 
 	int width = 0; 
 	int height = 0;
-
 
 	//OpenCL members
 

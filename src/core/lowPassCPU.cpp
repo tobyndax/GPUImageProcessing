@@ -182,7 +182,7 @@ GPUImgProc::LowPassCPU::~LowPassCPU()
 void GPUImgProc::LowPassCPU::execute()
 {
 
-		int radius = 11;
+		int radius = 25;
 		
 		//Run functionality
 		horizontalPassCumulative(radius);
@@ -198,7 +198,7 @@ void GPUImgProc::LowPassCPU::executeReference()
 	for (size_t i = 0; i < 1; i++)
 	{
 
-		int radius = 11;
+		int radius = 25;
 		//Run functionality
 		horizontalPass(radius);
 		transposeData();

@@ -77,7 +77,7 @@ void openCLMain() {
 	
 	perf.measureFunction([&] {locl.downloadData(); }, "download data");
 
-	perf.measureFunction([&] { data = locl.getDataC(); }, "getDataC");
+	perf.measureFunction([&] {data = locl.getDataC(); }, "getDataC");
 
 	perf.printTotalTime();
 	perf.printTimeSumBetween(1);
