@@ -1,5 +1,6 @@
 
 #include <PNGViewer.h>
+//#include <lowPassAMP.h>
 #include <sdl.h> // Need this for SDL_Quit at exit
 #include <lowPassCPU.h>
 #include <iostream>
@@ -16,7 +17,7 @@
 #include <fstream>
 #include <string>
 
-#include "lowPassGPU.h"
+#include "lowPassOpenCL.h"
 
 #ifdef __APPLE__
 std::string pngPath = "../testdata/lenaGrayLarge.png";
@@ -24,8 +25,8 @@ std::string pngPath = "../testdata/lenaGrayLarge.png";
 std::string pngPath = "..\\..\\testdata\\lenaGrayLarge.png";
 #endif
 
+int refMain() {
 
-int actualMain() {
 	GPUImgProc::PNGViewer* pngLoader = new GPUImgProc::PNGViewer();
 
 	pngLoader->setDataFromFile(pngPath);
@@ -38,21 +39,19 @@ int actualMain() {
 	GPUImgProc::LowPassCPU *lowPCPU;
 	
 	perf.measureFunction([&] {lowPCPU = new GPUImgProc::LowPassCPU(data, pngLoader->getWidth(), pngLoader->getHeight()); }, "init LowPassCPU");
+
 	perf.measureFunction([&] {lowPCPU->execute(); }, "execute");
+
 	perf.measureFunction([&] {newData = lowPCPU->getDataC(); }, "getDataC");
+
 	perf.printTotalTime();
+	std::cout << "########################################" << std::endl << std::endl;
+
+
 	pngLoader->setData(reinterpret_cast<unsigned char*>(newData), pngLoader->getWidth(), pngLoader->getHeight());
 
 	pngLoader->showWaitForEsc();
-	/*
-	lowPCPU->setData(data);
-
-	lowPCPU->executeReference();
-	newData = lowPCPU->getDataC();
-	pngLoader->setData(reinterpret_cast<unsigned char*>(newData), pngLoader->getWidth(), pngLoader->getHeight());
-
-	pngLoader->showWaitForEsc();
-	*/
+	
 	delete pngLoader;
 	return 0;
 }
@@ -68,77 +67,75 @@ void openCLMain() {
 
 	PerfUtility perf = PerfUtility();
 
-	LowPassGPU locl;
-	perf.measureFunction([&] {locl.initOpenCL(); }, "initOpenCL");
+	LowPassOpenCL* locl = new LowPassOpenCL(CL_DEVICE_TYPE_CPU);
+	perf.measureFunction([&] {locl->initOpenCL(); }, "initOpenCL CPU Version");
 
-	perf.measureFunction([&]{ locl.uploadImage(data, pngLoader->getWidth(), pngLoader->getHeight()); }, "upload data");
+	perf.measureFunction([&]{ locl->uploadImage(data, pngLoader->getWidth(), pngLoader->getHeight()); }, "upload data");
 
-	perf.measureFunction([&] {locl.execute();}, "execute");
+	perf.measureFunction([&] {locl->execute();}, "execute");
 	
-	perf.measureFunction([&] {locl.downloadData(); }, "download data");
+	perf.measureFunction([&] {locl->downloadData(); }, "download data");
 
-	perf.measureFunction([&] {data = locl.getDataC(); }, "getDataC");
+	perf.measureFunction([&] {data = locl->getDataC(); }, "getDataC");
 
 	perf.printTotalTime();
 	perf.printTimeSumBetween(1);
-
+	std::cout << "########################################" << std::endl << std::endl;
 
 	pngLoader->setData(reinterpret_cast<unsigned char*>(data), pngLoader->getWidth(), pngLoader->getHeight());
 	pngLoader->showWaitForEsc();
 
+	perf.reset();
+	pngLoader->setDataFromFile(pngPath);
+	data = pngLoader->getDataSingleChannel();
+	
+	locl = new LowPassOpenCL(CL_DEVICE_TYPE_GPU);
+	perf.measureFunction([&] {locl->initOpenCL(); }, "initOpenCL GPU Version");
 
+	perf.measureFunction([&] { locl->uploadImage(data, pngLoader->getWidth(), pngLoader->getHeight()); }, "upload data");
 
+	perf.measureFunction([&] {locl->execute(); }, "execute");
 
-	/*
-	OpenCLPlayground ocl;
-	//ocl.listDevices();
+	perf.measureFunction([&] {locl->downloadData(); }, "download data");
 
-	ocl.initData();
+	perf.measureFunction([&] {data = locl->getDataC(); }, "getDataC");
 
-	std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
+	perf.printTotalTime();
+	perf.printTimeSumBetween(1);
 
-	ocl.initOpenCL();
+	perf.measureFunction([&] {locl->executeLowPassGPUOnce(); }, "One Lowpass only");
+	perf.measureFunction([&] {locl->executeTransposeOnce(); }, "One transpose only");
 
-	std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
+	std::cout << "########################################" << std::endl << std::endl;
+	
+	pngLoader->setData(reinterpret_cast<unsigned char*>(data), pngLoader->getWidth(), pngLoader->getHeight());
+	pngLoader->showWaitForEsc();
 
-	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
-
-	std::cout << duration / 1000.0f << "ms" << std::endl;
-
-
-	t1 = std::chrono::high_resolution_clock::now();
-
-	ocl.addArrays();
-
-	t2 = std::chrono::high_resolution_clock::now();
-
-	duration = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
-
-	std::cout << duration / 1000.0f << "ms" << std::endl;
-
-	ocl.initData();
-
-
-	t1 = std::chrono::high_resolution_clock::now();
-
-	ocl.testRef();
-
-	t2 = std::chrono::high_resolution_clock::now();
-
-	duration = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
-
-	std::cout << duration / 1000.0f << "ms" << std::endl;
-
-
-	int i;
-	std::cin >> i;
-	*/
 }
+//
+//void ampMain() {
+//	GPUImgProc::PNGViewer* pngLoader = new GPUImgProc::PNGViewer();
+//
+//	pngLoader->setDataFromFile(pngPath);
+//
+//	unsigned char* data;
+//	data = pngLoader->getDataSingleChannel();
+//
+//	PerfUtility perf = PerfUtility();
+//
+//	LowPassAMP* lamp= new LowPassAMP();
+//	perf.measureFunction([&] {lamp->init(); }, "init amp");
+//	perf.measureFunction([&] { lamp->uploadData(data, pngLoader->getWidth(), pngLoader->getHeight()); }, "upload data");
+//
+//
+//}
+
 
 int main(int argc, char * argv[])
 {
+	//ampMain();
 	openCLMain();
-	actualMain();
+	refMain();
 	atexit(SDL_Quit);
 	return 0;
 }

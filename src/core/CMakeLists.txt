@@ -1,3 +1,4 @@
+include_directories(${CMAKE_SOURCE_DIR}/core)
 include_directories(${CMAKE_SOURCE_DIR}/../include)
 include_directories(${CMAKE_SOURCE_DIR}/thirdparty/OpenCL1.2/)
 

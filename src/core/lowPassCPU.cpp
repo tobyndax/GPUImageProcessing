@@ -1,25 +1,24 @@
-#include "lowPassCPU.h"
+#include <lowPassCPU.h>
 #include <iostream>
 #include <chrono>
-
+#include <thread>
 using namespace std;
 using namespace std::chrono;
+
 
 GPUImgProc::LowPassCPU::LowPassCPU(unsigned char * aData, int aWidth, int aHeight)
 {
 	this->width = aWidth;
 	this->height = aHeight;
 
-	this->ping = new float[width*height];
+	this->ping = new float[width*height]; //Could potentially use malloc instead of new, for some extra performance
 	setData(aData);
 }
 
 void GPUImgProc::LowPassCPU::setData(unsigned char* aData) {
-	if (data) delete data;
-	data = new float[width*height];
-	for (int i = 0; i < width*height; ++i) {
-		data[i] = (float)aData[i];
-	}
+
+	this->data = new float[width*height]; //Could potentially use malloc instead of new, for some extra performance
+	std::copy(aData, aData + width*height, data); 
 }
 
 void GPUImgProc::LowPassCPU::horizontalPass(int radius)
@@ -59,12 +58,12 @@ void GPUImgProc::LowPassCPU::horizontalPass(int radius)
 		}
 	}
 	if (numPasses % 2 != 0) {
-		std::swap(data, ping); 
+		std::swap(data, ping);
 	}
 }
 
 //Straightforward implementation of transpose.
-void GPUImgProc::LowPassCPU::transposeData() { 
+void GPUImgProc::LowPassCPU::transposeData() {
 	for (int j = 0; j < height; ++j) {
 		for (int i = 0; i < width; ++i) {
 			int currentInd = i + j*width;
@@ -77,10 +76,14 @@ void GPUImgProc::LowPassCPU::transposeData() {
 	}
 	std::swap(ping, data);
 }
-void  GPUImgProc::LowPassCPU::transpose(float* __restrict a, float * __restrict b, int width, int height, int strideA, int strideB)
+
+
+
+void  GPUImgProc::LowPassCPU::transpose(float* __restrict a, float * __restrict b, const int width, const int height, const int strideA, const int strideB)
 {
-	__assume(height <= TRANSPOSE_BLOCK_SIZE);
-	__assume(width <= TRANSPOSE_BLOCK_SIZE);
+	/*__assume(height < TRANSPOSE_BLOCK_SIZE + 1); //Issue with using __assume in release in vs 15.5 
+	__assume(width < TRANSPOSE_BLOCK_SIZE + 1);*/
+
 	for (int j = 0; j < height; ++j) {
 		for (int i = 0; i < width; ++i) {
 			int index = i + j*strideA;
@@ -89,38 +92,46 @@ void  GPUImgProc::LowPassCPU::transpose(float* __restrict a, float * __restrict 
 		}
 	}
 }
+
 void GPUImgProc::LowPassCPU::recursiveTranspose(float * __restrict a, float * __restrict b, int widthA, int heightA, int strideA, int strideB)
 {
+	// Base case 
 	if (heightA <= TRANSPOSE_BLOCK_SIZE && widthA <= TRANSPOSE_BLOCK_SIZE) {
 		transpose(a, b, widthA, heightA, strideA, strideB);
+		return;
 	}
-	else if (heightA > widthA) { //Split along height in A
-		float* aTop = a;
-		float* aBot = a + heightA*strideA / 2;
 
-		//splitting along height in A means splitting along width in B
-		float* bLeft = b;
-		float* bRight = b + heightA / 2;
+	// Recursive case
+	{
+		if (heightA > widthA) { //Split along height in A
+			float* aTop = a;
+			float* aBot = a + heightA*strideA / 2;
 
-		recursiveTranspose(aTop, bLeft, widthA, heightA / 2, strideA, strideB);
-		recursiveTranspose(aBot, bRight, widthA, heightA / 2, strideA, strideB);
-	}
-	else { //Split along width in A
-		float* aLeft = a;
-		float* aRight = a + widthA / 2;
+			//splitting along height in A means splitting along width in B
+			float* bLeft = b;
+			float* bRight = b + heightA / 2;
 
-		//splitting along width in A means splitting along height in B
-		float* bTop = b;
-		float* bBot = b + widthA*strideB/ 2;
+			recursiveTranspose(aTop, bLeft, widthA, heightA / 2, strideA, strideB);
+			recursiveTranspose(aBot, bRight, widthA, heightA / 2, strideA, strideB);
+		}
+		else { //Split along width in A
+			float* aLeft = a;
+			float* aRight = a + widthA / 2;
 
-		recursiveTranspose(aLeft, bTop, widthA / 2, heightA, strideA,strideB);
-		recursiveTranspose(aRight, bBot, widthA / 2, heightA, strideA, strideB);
+			//splitting along width in A means splitting along height in B
+			float* bTop = b;
+			float* bBot = b + widthA*strideB / 2;
+
+			recursiveTranspose(aLeft, bTop, widthA / 2, heightA, strideA, strideB);
+			recursiveTranspose(aRight, bBot, widthA / 2, heightA, strideA, strideB);
+		}
 	}
 }
 
 void GPUImgProc::LowPassCPU::horizontalPassCumulative(const int radius)
 {
 
+#pragma omp parallel for 
 	//fill out of bounds with zeros
 	for (int j = 0; j < height; ++j) {
 		for (int i = 0; i < radius + 1; ++i) {
@@ -128,7 +139,7 @@ void GPUImgProc::LowPassCPU::horizontalPassCumulative(const int radius)
 			ping[currentInd] = 0;
 		}
 	}
-
+#pragma omp parallel for 
 	//fill out of bounds with zeros
 	for (int j = 0; j < height; ++j) {
 		for (int i = width - radius; i < width; ++i) {
@@ -137,6 +148,7 @@ void GPUImgProc::LowPassCPU::horizontalPassCumulative(const int radius)
 		}
 	}
 
+#pragma omp parallel for num_threads(4)
 	for (int i = 0; i < height; ++i) {
 		horizontalPassCumulativeRow(i, radius);
 	}
@@ -145,14 +157,13 @@ void GPUImgProc::LowPassCPU::horizontalPassCumulative(const int radius)
 	}
 }
 
-
 void GPUImgProc::LowPassCPU::horizontalPassCumulativeRow(const int row, const int radius)
 {
 	float scale = 1.0f / (2.0f*radius + 1.0f);
 	float* dPtr = &data[row*width];
 	float* oPtr = &ping[row*width];
 	for (int pass = 0; pass < numPasses; pass++) {
-		
+
 		//Sum for first pixel
 		float sum = 0;
 		for (int r = -radius; r < radius; ++r) {
@@ -162,13 +173,11 @@ void GPUImgProc::LowPassCPU::horizontalPassCumulativeRow(const int row, const in
 
 		//Leave the edges for now
 		for (int i = radius; i < width - radius; ++i) {
-			*(oPtr+i) = sum*scale;
-			if (*(oPtr + i) < 0 ) {
-				int p  = 0; 
+			*(oPtr + i) = sum*scale;
+			if (*(oPtr + i) < 0) {
+				int p = 0;
 			}
-			sum += *(dPtr + i + radius ) - *(dPtr + i - radius); //remove leftmost value, add rightmost value
-			//ping[currentInd] = sum*scale; // TODO Change this to ping once vert pass is implemnented
-			//sum += data[i + radius + 1 + row*width] - data[i - radius + row*width];
+			sum += *(dPtr + i + radius) - *(dPtr + i - radius); //remove leftmost value, add rightmost value
 		}
 		std::swap(dPtr, oPtr);
 	}
@@ -176,21 +185,21 @@ void GPUImgProc::LowPassCPU::horizontalPassCumulativeRow(const int row, const in
 
 GPUImgProc::LowPassCPU::~LowPassCPU()
 {
-	delete data; 
+	delete data;
 	delete ping;
 }
 void GPUImgProc::LowPassCPU::execute()
 {
 
-		int radius = 25;
-		
-		//Run functionality
-		horizontalPassCumulative(radius);
-		recursiveTranspose(data, ping, width, height, width, height);
-		std::swap(data, ping);
-		horizontalPassCumulative(radius);
-		recursiveTranspose(data, ping, width, height, width, height);
-		std::swap(data, ping);
+	int radius = 25;
+
+	//Run functionality
+	horizontalPassCumulative(radius);
+	recursiveTranspose(data, ping, width, height, width, height);
+	std::swap(data, ping);
+	horizontalPassCumulative(radius);
+	recursiveTranspose(data, ping, width, height, width, height);
+	std::swap(data, ping);
 }
 
 void GPUImgProc::LowPassCPU::executeReference()
@@ -214,8 +223,7 @@ float * GPUImgProc::LowPassCPU::getDataF()
 unsigned char * GPUImgProc::LowPassCPU::getDataC()
 {
 	if (!outputC) outputC = new unsigned char[width*height];
-	for (int i = 0; i < width*height; ++i) {
-		outputC[i] = (unsigned char)data[i];
-	}
+	std::copy(data, data + width*height, outputC);
 	return outputC;
 }
+

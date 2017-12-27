@@ -7,12 +7,12 @@
 #include "../thirdparty/OpenCL1.2/cl.hpp"
 #endif
 
-class LowPassGPU {
+class LowPassOpenCL {
 
 public:
 
-	LowPassGPU();
-	~LowPassGPU();
+	LowPassOpenCL(cl_device_type);
+	~LowPassOpenCL();
 
 	void initOpenCL();
 	void uploadImage(unsigned char * imPtr, int width, int height);
@@ -22,7 +22,8 @@ public:
 	void transpose();
 
 	unsigned char * getDataC();
-
+	void executeTransposeOnce();
+	void executeLowPassGPUOnce();
 
 
 private:
@@ -38,12 +39,13 @@ private:
 	int height = 0;
 
 	//OpenCL members
-
+	cl_device_type clDevType = NULL; 
 	cl_device_id device_id = NULL;
 	cl_context context = NULL;
 	cl_command_queue command_queue = NULL;
-	cl_kernel lowPassKernel = NULL;
 	cl_kernel transposeKernel = NULL;
+	cl_kernel lowPassCPUKernel = NULL;
+	cl_kernel lowPassGPUKernel = NULL;
 	cl_mem input_mem_obj = NULL;
 	cl_mem output_mem_obj = NULL;
 };

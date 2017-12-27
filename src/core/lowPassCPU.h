@@ -1,5 +1,6 @@
 #pragma once
-
+#include <thread>
+#include <vector>
 namespace GPUImgProc{
 
 	class LowPassCPU {
@@ -20,7 +21,7 @@ namespace GPUImgProc{
 		void horizontalPassCumulativeRow(const int row ,const int radius);
 		void transposeData();
 		void recursiveTranspose(float * __restrict a, float * __restrict  b, int widthA, int heightA, int strideA,int strideB);
-		void transpose(float* __restrict a, float * __restrict b, int width, int height, int strideA, int strideB);
+		void transpose(float* __restrict a, float * __restrict b, const int width, const int height, const int strideA, const int strideB);
 
 		int numPasses = 3;
 		int width = 0;
@@ -29,6 +30,5 @@ namespace GPUImgProc{
 		float* ping = nullptr;
 		float* pong = nullptr;
 		unsigned char* outputC = nullptr;
-
 	};
 }

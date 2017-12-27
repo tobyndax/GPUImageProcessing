@@ -44,3 +44,7 @@ void PerfUtility::measureFunction(std::function<void (void)> func, std::string f
 
 	std::cout << duration / 1000.0f << "ms" << std::endl;
 }
+
+void PerfUtility::reset() {
+	durations.clear();
+}

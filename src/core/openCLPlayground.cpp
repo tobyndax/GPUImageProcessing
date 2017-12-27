@@ -1,3 +1,4 @@
+
 #include "openCLPlayground.h"
 #include <iostream>
 #include <algorithm>
@@ -74,7 +75,6 @@ void OpenCLPlayground::initOpenCL() {
 
 	assert(ret == 0);
 }
-
 void OpenCLPlayground::initData() {
 	if (A) delete A;
 	if (B) delete B;

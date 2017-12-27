@@ -1,22 +1,22 @@
 #include <iostream>
-#include "lowPassGPU.h"
+#include "lowPassOpenCL.h"
 #include <cassert>
 #define MAX_SOURCE_SIZE (0x100000)
 
 using namespace cl;
 
-LowPassGPU::LowPassGPU()
+LowPassOpenCL::LowPassOpenCL(cl_device_type aclDevType) : clDevType(aclDevType)
 {
 	//Do not perform any heavy lifting initialization.
 	//Do heavy init in initOpenLC and uploadImage for timings.
 }
 
-LowPassGPU::~LowPassGPU()
+LowPassOpenCL::~LowPassOpenCL()
 {
 
 }
 
-void LowPassGPU::initOpenCL()
+void LowPassOpenCL::initOpenCL()
 {
 	cl_platform_id platform_id = NULL;
 	cl_uint ret_num_devices;
@@ -24,7 +24,7 @@ void LowPassGPU::initOpenCL()
 
 	cl_int ret = clGetPlatformIDs(1, &platform_id, &ret_num_platforms);
 
-	ret = clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_GPU, 1, &device_id, &ret_num_devices);
+	ret = clGetDeviceIDs(platform_id, clDevType, 1, &device_id, &ret_num_devices);
 
 	// Create an OpenCL context (which device?) 
 	context = clCreateContext(NULL, 1, &device_id, NULL, NULL, &ret);
@@ -58,16 +58,17 @@ void LowPassGPU::initOpenCL()
 	}
 	assert(ret == 0);
 	// Create the OpenCL kernel
-	lowPassKernel = clCreateKernel(program, "lowPass", &ret);
+	lowPassCPUKernel = clCreateKernel(program, "lowPassCPU", &ret);
 	assert(ret == 0);
-	transposeKernel= clCreateKernel(program, "transpose", &ret);
+	lowPassGPUKernel = clCreateKernel(program, "lowPassGPU", &ret);
 	assert(ret == 0);
-
-	
+	transposeKernel = clCreateKernel(program, "transpose", &ret);
+	assert(ret == 0);
+	clFinish(command_queue);
 }
 
 
-void LowPassGPU::uploadImage(unsigned char* imPtr, int aWidth, int aHeight) {
+void LowPassOpenCL::uploadImage(unsigned char* imPtr, int aWidth, int aHeight) {
 	width = aWidth;
 	height = aHeight;
 
@@ -84,31 +85,45 @@ void LowPassGPU::uploadImage(unsigned char* imPtr, int aWidth, int aHeight) {
 		width*height * sizeof(float), NULL, &ret);
 
 	assert(ret == 0);
-
-	// Set the arguments of the kernel
-	ret = clSetKernelArg(lowPassKernel, 0, sizeof(cl_mem), (void *)&input_mem_obj);
-	assert(ret == 0);
-
-	ret = clSetKernelArg(lowPassKernel, 1, sizeof(cl_mem), (void *)&output_mem_obj);
-	assert(ret == 0);
-
+	if(clDevType == CL_DEVICE_TYPE_CPU){
+		// Set the arguments of the kernel
+		ret = clSetKernelArg(lowPassCPUKernel, 0, sizeof(cl_mem), (void *)&input_mem_obj);
+		assert(ret == 0);
+		ret = clSetKernelArg(lowPassCPUKernel, 1, sizeof(cl_mem), (void *)&output_mem_obj);
+		assert(ret == 0);
+	}
+	else {
+		// Set the arguments of the kernel
+		ret = clSetKernelArg(lowPassGPUKernel, 0, sizeof(cl_mem), (void *)&input_mem_obj);
+		assert(ret == 0);
+		ret = clSetKernelArg(lowPassGPUKernel, 1, sizeof(cl_mem), (void *)&output_mem_obj);
+		assert(ret == 0);
+	}
 	//Upload data to OpenCL memory.
 	clEnqueueWriteBuffer(command_queue, input_mem_obj, CL_TRUE,0 , width*height * sizeof(float), input, NULL, NULL, NULL);
-
+	clFinish(command_queue);
 }
 
-void LowPassGPU::swapBuffers() {
+void LowPassOpenCL::swapBuffers() {
 
 	std::swap(input_mem_obj, output_mem_obj);
 	// Set the arguments of the kernel
-	cl_int ret = clSetKernelArg(lowPassKernel, 0, sizeof(cl_mem), (void *)&input_mem_obj);
-	assert(ret == 0);
-
-	ret = clSetKernelArg(lowPassKernel, 1, sizeof(cl_mem), (void *)&output_mem_obj);
-	assert(ret == 0);
+	if (clDevType == CL_DEVICE_TYPE_CPU) {
+		cl_int ret = clSetKernelArg(lowPassCPUKernel, 0, sizeof(cl_mem), (void *)&input_mem_obj);
+		assert(ret == 0);
+		ret = clSetKernelArg(lowPassCPUKernel, 1, sizeof(cl_mem), (void *)&output_mem_obj);
+		assert(ret == 0);
+	}
+	else {
+		cl_int ret = clSetKernelArg(lowPassGPUKernel, 0, sizeof(cl_mem), (void *)&input_mem_obj);
+		assert(ret == 0);
+		ret = clSetKernelArg(lowPassGPUKernel, 1, sizeof(cl_mem), (void *)&output_mem_obj);
+		assert(ret == 0);
+	}
+	
 }
 
-void LowPassGPU::downloadData()
+void LowPassOpenCL::downloadData()
 {
 	if (output == nullptr) output = new float[width*height];
 	//Upload data to OpenCL memory.
@@ -118,7 +133,7 @@ void LowPassGPU::downloadData()
 
 /*Copy data from unsigned char* to float input data
 */
-void LowPassGPU::setData(unsigned char* aData) {
+void LowPassOpenCL::setData(unsigned char* aData) {
 	if (input) delete input;
 	input = new float[width*height];
 	for (int i = 0; i < width*height; ++i) {
@@ -126,7 +141,7 @@ void LowPassGPU::setData(unsigned char* aData) {
 	}
 }
 
-void LowPassGPU::transpose() {
+void LowPassOpenCL::transpose() {
 	// Set the arguments of the kernel
 	cl_int ret = clSetKernelArg(transposeKernel, 0, sizeof(cl_mem), (void *)&input_mem_obj);
 	assert(ret == 0);
@@ -142,42 +157,65 @@ void LowPassGPU::transpose() {
 	swapBuffers();
 }
 
-void LowPassGPU::execute()
+void LowPassOpenCL::execute()
 {
-	
-	for(int i = 0; i < 3; i++){
-		const ::size_t globalWorkSize[2] = { width,height };
-		const ::size_t lws[2] = {16,16};
-		cl_int ret = clEnqueueNDRangeKernel(command_queue, lowPassKernel, 2, NULL, globalWorkSize, lws, NULL, NULL, NULL);
-		assert(ret == 0); 
-		swapBuffers();
-	}
-
-	transpose();
-
-	for (int i = 0; i < 3; i++) {
-		const ::size_t globalWorkSize[2] = { width,height };
-		const ::size_t lws[2] = { 16,16 };
-		cl_int ret = clEnqueueNDRangeKernel(command_queue, lowPassKernel, 2, NULL, globalWorkSize, lws, NULL, NULL, NULL);
+	if(clDevType == CL_DEVICE_TYPE_CPU){
+		const ::size_t globalWorkSize[1] = { height };
+		const ::size_t lws[1] = { 1 };
+		cl_int ret = clEnqueueNDRangeKernel(command_queue, lowPassCPUKernel, 1, NULL, globalWorkSize, lws, NULL, NULL, NULL);
 		assert(ret == 0);
 		swapBuffers();
+		
+		ret = clEnqueueNDRangeKernel(command_queue, lowPassCPUKernel, 1, NULL, globalWorkSize, lws, NULL, NULL, NULL);
+		assert(ret == 0);
 	}
+	else{
+		
+		for(int i = 0; i < 3; i++){
+			const ::size_t globalWorkSize[2] = { width , height};
+			const ::size_t lws[2] = { 16,16 };
+			cl_int ret = clEnqueueNDRangeKernel(command_queue, lowPassGPUKernel, 2, NULL, globalWorkSize, lws, NULL, NULL, NULL);
+			assert(ret == 0);
+			swapBuffers();
+		}
 	
-	transpose();
+		transpose();
 
-	swapBuffers();
+		for (int i = 0; i < 3; i++) {
+			const ::size_t globalWorkSize[2] = { width , height };
+			const ::size_t lws[2] = { 16,16};
+			cl_int ret = clEnqueueNDRangeKernel(command_queue, lowPassGPUKernel, 2, NULL, globalWorkSize, lws, NULL, NULL, NULL);
+			assert(ret == 0);
+			swapBuffers();
+		}
+	
+		transpose();
+		swapBuffers();
+	}
+
 	clFinish(command_queue); //Finish the clCommandqueue to not misrepresent the timings 
 }
 
+void LowPassOpenCL::executeLowPassGPUOnce() {
+	const ::size_t globalWorkSize[2] = { width , height };
+	const ::size_t lws[2] = { 16,16 };
+	cl_int ret = clEnqueueNDRangeKernel(command_queue, lowPassGPUKernel, 2, NULL, globalWorkSize, lws, NULL, NULL, NULL);
+	assert(ret == 0);
+	swapBuffers();
+	clFinish(command_queue);
+}
+void LowPassOpenCL::executeTransposeOnce() {
+	transpose();
+	swapBuffers();
+	clFinish(command_queue);
+}
 
 /* If you use this function to get the data, you are responsible for the deletion of the memory.
 * Returns a pointer to a unsigned char version of the output data.
 */
-unsigned char * LowPassGPU::getDataC()
+unsigned char * LowPassOpenCL::getDataC()
 {
 	if (!outputC) outputC = new unsigned char[width*height];
-	for (int i = 0; i < width*height; ++i) {
-		outputC[i] = (unsigned char)output[i];
-	}
+	std::copy(output, output + width*height, outputC);
 	return outputC;
 }
