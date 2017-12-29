@@ -21,5 +21,3 @@ Run cmake in the src directory on CMakeLists.txt or cmake -D CMAKE_BUILD_TYPE=Re
 ## Windows Visual Studio 2017
 Right click the GPUImageProcessing folder, select open folder (VS).
 The project should configure itself, select the startup app and build.
-
-SDL dll's are included in the repo for Windows.
